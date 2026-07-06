@@ -1,8 +1,12 @@
 # Deep JSCC — PyTorch Implementation
 
-PyTorch port of the Keras implementation in [`../Keras_Implementation`](../Keras_Implementation),
-based on *Deep Joint Source-Channel Coding for Wireless Image Transmission*
-(Bourtsoulatze et al., IEEE TCCN 2019).
+A PyTorch implementation of *Deep Joint Source-Channel Coding for Wireless Image
+Transmission* (Bourtsoulatze et al., IEEE TCCN 2019), following the paper and
+adapting the reference Keras/TensorFlow implementation by
+[irdanish11](https://github.com/irdanish11/DJSCC-for-Wireless-Image-Transmission)
+into PyTorch. See [Differences from the Keras version](#differences-from-the-keras-version)
+for how this port diverges from that reference, and
+[References](#references) for full citations.
 
 ## Files
 - `model.py` — the `DeepJSCC` autoencoder, the `Channel` (power-normalization + AWGN) layer, and `calculate_filters`.
@@ -81,3 +85,11 @@ python baselines.py --snr 20 --n-images 1000
   `z = sqrt(k·P)·z̃ / ‖z̃‖₂` followed by AWGN, instead of the original's element-wise
   complex-cast/transpose normalization (which was mathematically questionable).
 - Checkpoints are `state_dict` `.pt` files rather than Keras `.h5`.
+
+## References
+- E. Bourtsoulatze, D. Burth Kurka, and D. Gündüz, *"Deep Joint Source-Channel
+  Coding for Wireless Image Transmission,"* IEEE Transactions on Cognitive
+  Communications and Networking, vol. 5, no. 3, pp. 567–579, 2019.
+  [arXiv:1809.01733](https://arxiv.org/abs/1809.01733)
+- Reference Keras/TensorFlow implementation this port is adapted from:
+  [irdanish11/DJSCC-for-Wireless-Image-Transmission](https://github.com/irdanish11/DJSCC-for-Wireless-Image-Transmission)
