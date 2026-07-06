@@ -20,13 +20,13 @@ import torch
 import torchvision
 import torchvision.transforms as T
 from torch.utils.data import DataLoader
-from skimage.metrics import peak_signal_noise_ratio, structural_similarity
+from skimage.metrics import peak_signal_noise_ratio
 
 import matplotlib
 import matplotlib.pyplot as plt
 
 from model import DeepJSCC, calculate_filters
-from evaluate import reconstruct
+from evaluate import reconstruct, psnr_ssim_over_loader
 import baselines as B
 
 
@@ -85,9 +85,7 @@ def plot_psnr_vs_compratio(comp_ratios, snr_list, ckpt_root, device, loader,
                 print(f"[skip] missing checkpoint: {ckpt}")
                 continue
             model = _load_model(ckpt, comp_ratio, snr, device)
-            orig, recon = reconstruct(model, loader, device)
-            psnr = peak_signal_noise_ratio(orig, recon)
-            ssim = structural_similarity(orig, recon, channel_axis=-1)
+            psnr, ssim = psnr_ssim_over_loader(model, loader, device)
             print(f"comp_ratio={comp_ratio}  SNR={snr}dB  PSNR={psnr:.3f}  SSIM={ssim:.4f}")
             xs.append(comp_ratio)
             psnrs.append(psnr)
