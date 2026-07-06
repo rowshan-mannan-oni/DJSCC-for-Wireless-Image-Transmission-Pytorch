@@ -69,21 +69,33 @@ python baselines.py --snr 20 --n-images 1000
 
 **Baseline method** (from the paper): source-code each image with JPEG/JPEG2000, transmit over a complex-AWGN channel with a *capacity-achieving* code. The per-image bit budget is `B = (k/n)·C·n = k·log₂(1+SNR)`. The highest-quality encoding that fits `B` is sent error-free; if even the smallest encoding exceeds `B` the image is in **outage** and each colour channel is set to its mean pixel value (the "cliff effect"). On tiny 32×32 images JPEG's header overhead alone usually exceeds the budget, so it spends most of the curve in outage — which is precisely why Deep JSCC wins on CIFAR-10.
 
-## Architecture (32×32×3 input)
-| Stage | Layers | Spatial size |
-|-------|--------|--------------|
-| Encoder | 5× Conv2d + PReLU | 32 → 14 → 5 → 5 → 5 → 5 |
-| Channel | power normalize + AWGN | 5×5×c |
-| Decoder | 5× ConvTranspose2d (+PReLU), sigmoid, upsample×2, center-crop | 5 → 13 → 29 → 58 → 32 |
+## Architecture (32×32×3 input, paper Fig. 2)
+| Stage | Layers (kernel 5, padding 2) | Channels | Spatial (H=W) |
+|-------|------------------------------|----------|---------------|
+| Encoder | Conv /2, Conv /2, Conv, Conv, Conv — each + PReLU | 3→16→32→32→32→c | 32 → 16 → 8 → 8 → 8 |
+| Channel | avg-power normalize + **complex** AWGN | c | 8×8×c = 2k reals → **k = 32c** complex uses |
+| Decoder | mirror: 5× ConvTranspose2d (+PReLU), sigmoid on last | c→32→32→32→16→3 | 8 → 8 → 8 → 16 → 32 |
 
-`c = calculate_filters(comp_ratio)` sets the number of transmitted channels (the compression ratio k/n).
+`c = calculate_filters(k/n)` sets the number of transmitted channels. With the
+8×8 latent and n = 3072 real source samples, `c = round(96·k/n)` — e.g.
+k/n = 1/6 → c = 16, k/n = 1/12 → c = 8. The stride-2 transpose convs use
+`output_padding=1` to reach 32×32 exactly, so no cropping is needed.
+
+## Faithfulness to the paper
+- **Complex AWGN channel.** The 8×8×c real encoder outputs are read as
+  k = 8·8·c/2 complex symbols. Average-power normalization
+  `z = sqrt(k·P)·z̃/‖z̃‖₂` gives each symbol power P; noise is
+  `n ~ CN(0, P/SNR)`, so the per-symbol SNR equals the configured value.
+  (The earlier real-valued channel normalized power per *real* dimension but
+  split noise as if complex, making the effective SNR 2× — 3 dB — too high.)
+- **Evaluation** transmits each image 10× and averages, computing PSNR/SSIM
+  **per image** then averaging over the test set (paper's protocol).
+- **Bandwidth ratio** k/n uses complex channel uses k and n = 3072, matching
+  the paper; the JPEG/JPEG2000 baselines use the same convention.
 
 ## Differences from the Keras version
 - **NCHW** tensors instead of Keras NHWC.
 - **PReLU** is per-channel (`nn.PReLU(C)`) rather than Keras' per-element default — fewer parameters, conventional choice.
-- The **channel layer** implements the paper's clean average-power normalization
-  `z = sqrt(k·P)·z̃ / ‖z̃‖₂` followed by AWGN, instead of the original's element-wise
-  complex-cast/transpose normalization (which was mathematically questionable).
 - Checkpoints are `state_dict` `.pt` files rather than Keras `.h5`.
 
 ## References

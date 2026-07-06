@@ -12,7 +12,7 @@ import torch
 import torchvision
 import torchvision.transforms as T
 from torch.utils.data import DataLoader
-from skimage.metrics import peak_signal_noise_ratio, structural_similarity
+from skimage.metrics import structural_similarity
 
 from model import DeepJSCC, calculate_filters
 

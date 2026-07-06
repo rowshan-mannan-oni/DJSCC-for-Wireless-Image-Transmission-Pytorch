@@ -21,11 +21,10 @@ These baselines need no trained network -- they only need the test images.
 
 Convention note
 ---------------
-This repo's encoder emits  comp_ratio * n  *real* channel symbols
-(n = 32*32*3 = 3072). Two real symbols form one complex channel use, so the
-number of complex uses is  k = comp_ratio * n / 2  and
-      B = (comp_ratio * n / 2) * log2(1 + SNR)   bits.
-Pass --no-complex to instead treat comp_ratio directly as complex-uses/n.
+`comp_ratio` is the bandwidth ratio k/n exactly as in the model, where k is the
+number of *complex* channel uses and n = 32*32*3 = 3072 real source samples.
+Hence k = comp_ratio * n and the per-image bit budget is
+      B = k * log2(1 + SNR) = comp_ratio * n * log2(1 + SNR)   bits.
 """
 
 import io
@@ -44,9 +43,9 @@ def capacity_bits(snr_db):
     return math.log2(1.0 + snr)
 
 
-def bit_budget(comp_ratio, snr_db, n_source=N_SOURCE, complex_uses=True):
-    """Per-image bit budget B = k * C."""
-    k = comp_ratio * n_source / (2.0 if complex_uses else 1.0)
+def bit_budget(comp_ratio, snr_db, n_source=N_SOURCE):
+    """Per-image bit budget B = k * C, with k = comp_ratio * n complex uses."""
+    k = comp_ratio * n_source
     return k * capacity_bits(snr_db)
 
 
@@ -104,12 +103,12 @@ def _psnr(a, b):
 
 
 def baseline_curve(images, comp_ratios, snr_db, fmt="JPEG",
-                   n_source=N_SOURCE, complex_uses=True, verbose=True):
+                   n_source=N_SOURCE, verbose=True):
     """Average PSNR over `images` (N,H,W,3 uint8) for each compression ratio.
     Returns (psnr_list, outage_rate_list)."""
     psnrs, outages = [], []
     for cr in comp_ratios:
-        budget = bit_budget(cr, snr_db, n_source, complex_uses)
+        budget = bit_budget(cr, snr_db, n_source)
         ps, n_out = [], 0
         for img in images:
             recon, outage = best_recon_within_budget(img, budget, fmt)
@@ -150,8 +149,6 @@ def parse_args():
     p.add_argument("--snr", type=float, default=20.0, help="channel SNR in dB")
     p.add_argument("--formats", type=str, nargs="+", default=["JPEG", "JPEG2000"])
     p.add_argument("--n-images", type=int, default=1000, help="test images to average over")
-    p.add_argument("--no-complex", action="store_true",
-                   help="treat comp_ratio as complex-uses/n (skip the /2 real->complex)")
     p.add_argument("--data-root", type=str, default="./data")
     p.add_argument("--out", type=str, default="baselines.png")
     return p.parse_args()
@@ -172,8 +169,7 @@ if __name__ == "__main__":
     plt.figure(figsize=(7, 5))
     for f in fmts:
         print(f"--- {f} ---")
-        psnrs, _ = baseline_curve(imgs, args.comp_ratios, args.snr, fmt=f,
-                                  complex_uses=not args.no_complex)
+        psnrs, _ = baseline_curve(imgs, args.comp_ratios, args.snr, fmt=f)
         plt.plot(args.comp_ratios, psnrs, marker="o", ls="-.", label=f"{f} (SNR={args.snr}dB)")
 
     plt.title(f"Separation baselines, AWGN channel (SNR={args.snr} dB)")
