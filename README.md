@@ -83,11 +83,15 @@ k/n = 1/6 → c = 16, k/n = 1/12 → c = 8. The stride-2 transpose convs use
 
 ## Faithfulness to the paper
 - **Complex AWGN channel.** The 8×8×c real encoder outputs are read as
-  k = 8·8·c/2 complex symbols. Average-power normalization
+  k = 8·8·c/2 complex symbols. Power normalization
   `z = sqrt(k·P)·z̃/‖z̃‖₂` gives each symbol power P; noise is
   `n ~ CN(0, P/SNR)`, so the per-symbol SNR equals the configured value.
   (The earlier real-valued channel normalized power per *real* dimension but
   split noise as if complex, making the effective SNR 2× — 3 dB — too high.)
+  Note: this normalizes *every* sample to exactly `‖z‖² = k·P`, a common
+  simplification that is slightly stricter than the paper's *average*-power
+  constraint `(1/k)·E[zᴴz] ≤ P` (which the per-sample version satisfies with
+  equality).
 - **Evaluation** transmits each image 10× and averages, computing PSNR/SSIM
   **per image** then averaging over the test set (paper's protocol).
 - **Bandwidth ratio** k/n uses complex channel uses k and n = 3072, matching
